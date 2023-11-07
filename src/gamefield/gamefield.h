@@ -36,7 +36,7 @@ private:
     int dx_ = 0, dy_ = 0;
     uint score_ = 0;
     QTimer timer_;
-    const uint colorSwitchLimit_ = 3;
+    const uint colorSwitchCount_ = 3;
     uint colorSwitches_ = 0;
 };
 

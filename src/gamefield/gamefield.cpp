@@ -5,7 +5,7 @@
 #include <QMessageBox>
 
 GameField::GameField(QWidget *parent, int colorSwitchLimit)
-: Table(parent), colorSwitchLimit_(colorSwitchLimit), timer_(this) {
+: Table(parent), colorSwitchCount_(colorSwitchLimit), timer_(this) {
     connect(&timer_, &QTimer::timeout, this, &GameField::FigureDrop);
 }
 
@@ -47,7 +47,7 @@ void GameField::FigureDrop() {
 
 void GameField::NextFigure() {
     dy_ = 0, dx_ = 0, colorSwitches_ = 0;
-    emit FigureColorSwitched(colorSwitchLimit_);
+    emit FigureColorSwitched(colorSwitchCount_);
     currentFigure_ = std::exchange(nextFigure_, figureGenerator_());
     emit NextFigureUpdated(nextFigure_);
     if (uint score = CountScore()) {
@@ -85,10 +85,10 @@ void GameField::keyPressEvent(QKeyEvent *event) {
             break;
         case Qt::Key_Space:
             RedrawFigure(
-                colorSwitches_ < colorSwitchLimit_,
+                colorSwitches_ < colorSwitchCount_,
                 [this](){
                     ++colorSwitches_;
-                    emit FigureColorSwitched(colorSwitchLimit_ - colorSwitches_);
+                    emit FigureColorSwitched(colorSwitchCount_ - colorSwitches_);
                     currentFigure_.SetColors(
                         figureGenerator_.GenerateColors()
                     );
@@ -140,51 +140,52 @@ bool GameField::IsOutOfBounds(const Figure& figure, int dx, int dy) {
 }
 
 uint GameField::CountScore() noexcept {
-    uint vseq = 2, hseq = 2, score = 0;
-    while (vseq > 1 && hseq > 1) {
+    constexpr uint minSeq = 3;
+    uint vSeq = minSeq, hSeq = minSeq, score = 0;
+    while (vSeq > 1 && hSeq > 1) {
         for (uint i = 1; i < rowsCount_; ++i) {
-            hseq = 1;
+            hSeq = 1;
             for (uint j = 1; j < columnsCount_; ++j) {
                 if (cellsColors_[i][j] != kCellDefaultColor && cellsColors_[i][j] == cellsColors_[i][j - 1])
-                    ++hseq;
+                    ++hSeq;
                 else {
-                    if (hseq > 2) {
-                        score += hseq;
+                    if (hSeq >= minSeq) {
+                        score += hSeq;
                         for (uint k = i; k > 0; --k)
-                            for (uint l = 1; l <= hseq; ++l)
+                            for (uint l = 1; l <= hSeq; ++l)
                                 cellsColors_[k][j - l] = cellsColors_[k - 1][j - l];
                     }
-                    hseq = 1;
+                    hSeq = 1;
                 }
             }
-            if (hseq > 2) {
-                score += hseq;
+            if (hSeq >= minSeq) {
+                score += hSeq;
                 for (uint k = i; k > 0; --k)
-                    for (uint l = 1; l <= hseq; ++l)
+                    for (uint l = 1; l <= hSeq; ++l)
                         cellsColors_[k][columnsCount_ - l] = cellsColors_[k - 1][columnsCount_ - l];
             }
         }
         for (uint j = 0; j < columnsCount_; ++j) {
-            vseq = 1;
+            vSeq = 1;
             for (uint i = 1; i < rowsCount_; ++i) {
                 if (cellsColors_[i][j] != kCellDefaultColor && cellsColors_[i][j] == cellsColors_[i - 1][j])
-                    ++vseq;
+                    ++vSeq;
                 else {
-                    if (vseq > 2) {
-                        score += vseq;
-                        for (uint k = 1; k < i - vseq; ++k)
-                            cellsColors_[i - k][j] = cellsColors_[i - vseq - k][j];
-                        for (uint k = i - vseq; k <= i; ++k)
+                    if (vSeq >= minSeq) {
+                        score += vSeq;
+                        for (uint k = 1; k < i - vSeq; ++k)
+                            cellsColors_[i - k][j] = cellsColors_[i - vSeq - k][j];
+                        for (uint k = i - vSeq; k <= i; ++k)
                             cellsColors_[i - k][j] = kCellDefaultColor;
                     }
-                    vseq = 1;
+                    vSeq = 1;
                 }
             }
-            if (vseq > 2) {
-                score += vseq;
-                for (uint k = 1; k <= rowsCount_ - vseq; ++k)
-                    cellsColors_[rowsCount_ - k][j] = cellsColors_[rowsCount_ - vseq - k][j];
-                for (uint k = rowsCount_ - vseq; k <= rowsCount_; ++k)
+            if (vSeq >= minSeq) {
+                score += vSeq;
+                for (uint k = 1; k <= rowsCount_ - vSeq; ++k)
+                    cellsColors_[rowsCount_ - k][j] = cellsColors_[rowsCount_ - vSeq - k][j];
+                for (uint k = rowsCount_ - vSeq; k <= rowsCount_; ++k)
                     cellsColors_[rowsCount_ - k][j] = kCellDefaultColor;
             }
         }
